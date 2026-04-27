@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  # 1. 데이터베이스 설정 (MySQL)
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Mbc320!!
+      MYSQL_DATABASE: lms
+      MYSQL_USER: mbc
+      MYSQL_PASSWORD: 1234
+    ports:
+      - "3306:3306"
+    volumes:
+      # mysql_data 볼륨에 데이터를 저장하여 컨테이너가 삭제되어도 DB 내용은 유지됨
+      - mysql_data:/var/lib/mysql
+      # 초기 SQL 파일을 넣어두면 DB 생성 시 자동으로 테이블 등을 만들어줌
+      - ./mysql-init:/docker-entrypoint-initdb.d
+
+  # 2. 백엔드 설정 (Flask + AI)
+  flask:
+    build: ./flask-app
+    container_name: flask
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql # MySQL이 먼저 켜진 뒤에 Flask가 실행되도록 보장
+
+    # [핵심 수정] 실시간 코드 반영을 위한 볼륨 설정
+    volumes:
+      # 기존에 ./flask-app:/app 전체를 연결했을 때는 컨테이너 내부의 
+      # 파이썬 라이브러리(site-packages)까지 로컬 폴더가 덮어버려서 
+      # "ModuleNotFoundError"가 발생했습니다.
+      # 따라서 아래와 같이 소스 코드가 들어있는 'LMS' 폴더만 따로 연결해야 합니다.
+      - ./flask-app/LMS:/app/LMS
+      # 업로드된 영상이나 결과물은 로컬 폴더와 동기화하여 서버 밖에서도 확인 가능하게 함
+      - ./flask-app/uploads:/app/uploads
+
+    # GPU 설정: NVIDIA 그래픽카드를 컨테이너 안에서 사용할 수 있게 함
+    deploy: {}
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PYTHONPATH=/app:/app/LMS
+      - PYTHONUNBUFFERED=1
+  
+  # 3. 프론트엔드 설정 (Next.js)
+  frontend:
+    build: ./next-app
+    container_name: next-app
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - flask # 백엔드 API가 준비된 후 프론트 실행
+    environment:
+      # 프론트엔드에서 Flask 서버 주소를 알 수 있도록 환경변수 설정
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      # 도커가 파일을 주기적으로 체크하도록 강제 (필수)
+      - WATCHPACK_POLLING=true
+
+    volumes:
+      # 로컬에서 Next.js 코드를 수정하면 브라우저에 즉시 반영되도록 함
+      - ./next-app:/app
+      # [중요] 호스트의 node_modules가 컨테이너 내부를 덮어쓰지 않도록 
+      # 컨테이너 안의 라이브러리 폴더를 보호(Anonymous Volume)함
+      - /app/node_modules 
+      - /app/.next # 빌드 결과물 캐시 충돌 방지를 위해 추가 권장
+
+# 명시적 볼륨 선언: DB 데이터를 안전하게 보관하기 위한 저장소
+volumes:
+  mysql_data:

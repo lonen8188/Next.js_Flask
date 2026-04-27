@@ -1,0 +1,44 @@
+/* ... 기존 Tailwind 및 기본 설정 유지 ... */
+
+/**
+ * 🚨 네비바 글자색 강제 해결 (Bootstrap + Tailwind 충돌 방지)
+ */
+
+/* 1. 네비바의 모든 링크와 브랜드명을 흰색으로 강제 고정 */
+nav.navbar .navbar-brand,
+nav.navbar .nav-link,
+nav.navbar .navbar-nav .nav-item .nav-link {
+  color: #ffffff !important;
+  opacity: 1 !important; /* 투명도 제거 */
+  text-decoration: none !important;
+}
+
+/* 2. 마우스 올렸을 때(Hover) 효과 */
+nav.navbar .nav-link:hover {
+  color: #cccccc !important; /* 살짝 회색으로 변하게 */
+  transition: color 0.2s ease;
+}
+
+/* 3. 현재 활성화된 메뉴(Active) */
+nav.navbar .nav-link.active {
+  font-weight: 800 !important;
+  color: #ffffff !important;
+}
+
+/* 4. 버튼 내부 글자색 (회원가입/로그아웃 버튼용) */
+.btn-primary {
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+  color: #ffffff !important;
+}
+
+.btn-light {
+  background-color: #f8f9fa !important;
+  color: #0d6efd !important; /* 파란 글씨 */
+  font-weight: bold !important;
+}
+
+/* 5. 모바일 토글 버튼 아이콘 색상 (검정 배경일 때 흰색으로) */
+.navbar-toggler-icon {
+  filter: invert(1) !important;
+}
